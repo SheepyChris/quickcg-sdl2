@@ -50,9 +50,11 @@ QuickCG can handle some things that standard C++ doesn't but that are commonly u
 namespace QuickCG
 {
 
+
 	////////////////////////////////////////////////////////////////////////////////
 	//VARIABLES/////////////////////////////////////////////////////////////////////
 	////////////////////////////////////////////////////////////////////////////////
+
 
 	int w; //width of the screen
 	int h; //height of the screen
@@ -66,9 +68,11 @@ namespace QuickCG
 	const Uint8* inkeys;
 	SDL_Event event = { 0 };
 
+
 	////////////////////////////////////////////////////////////////////////////////
 	//KEYBOARD FUNCTIONS////////////////////////////////////////////////////////////
 	////////////////////////////////////////////////////////////////////////////////
+
 
 	bool keyDown(int key) //this checks if the key is held down, returns true all the time until the key is up
 	{
@@ -91,9 +95,11 @@ namespace QuickCG
 		return false;
 	}
 
+
 	////////////////////////////////////////////////////////////////////////////////
 	//BASIC SCREEN FUNCTIONS////////////////////////////////////////////////////////
 	////////////////////////////////////////////////////////////////////////////////
+
 
 	//The screen function: sets up the window for 32-bit color graphics.
 	//Creates a graphical screen of width*height pixels in 32-bit color.
@@ -102,7 +108,6 @@ namespace QuickCG
 	//also inits SDL
 	void screen(int width, int height, bool fullscreen, const std::string& text)
 	{
-		int colorDepth = 32;
 		w = width;
 		h = height;
 
@@ -157,6 +162,7 @@ namespace QuickCG
 			SDL_Quit();
 			std::exit(1);
 		}
+		SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_BLEND);
 
 		fmt = srf->format;
 		if (fmt == NULL)
@@ -195,12 +201,12 @@ namespace QuickCG
 	//Clears the screen to black
 	void cls(const ColorRGBA& color)
 	{
-		SDL_SetRenderDrawColor(render, color.r, color.g, color.b, 255);
+		SDL_SetRenderDrawColor(render, color.r, color.g, color.b, color.a);
 		SDL_RenderClear(render);
 		SDL_RenderPresent(render);
 	}
 
-	//Puts an RGB color pixel at position x,y
+	//Puts an RGBA color pixel at position x,y
 	void pset(int x, int y, const ColorRGBA& color)
 	{
 		if (x < 0 || y < 0 || x >= w || y >= h) return;
@@ -265,10 +271,10 @@ namespace QuickCG
 	}
 
 
-
 	////////////////////////////////////////////////////////////////////////////////
 	//NON GRAPHICAL FUNCTIONS///////////////////////////////////////////////////////
 	////////////////////////////////////////////////////////////////////////////////
+
 
 	//Waits until you press a key. First the key has to be loose, this means, if you put two sleep functions in a row, the second will only work after you first released the key.
 	void sleep()
@@ -369,7 +375,7 @@ namespace QuickCG
 		if (x1 < 0) x1 = 0; //clip
 		if (x2 >= w) x2 = w - 1; //clip
 
-		Uint32 colorSDL = SDL_MapRGB(fmt, color.r, color.g, color.b);
+		Uint32 colorSDL = SDL_MapRGBA(fmt, color.r, color.g, color.b, color.a);
 		Uint32* bufp;
 		bufp = (Uint32*)srf->pixels + y * srf->pitch / 4 + x1;
 		for (int x = x1; x <= x2; x++)
@@ -389,7 +395,7 @@ namespace QuickCG
 		if (y1 < 0) y1 = 0; //clip
 		if (y2 >= w) y2 = h - 1; //clip
 
-		Uint32 colorSDL = SDL_MapRGB(fmt, color.r, color.g, color.b);
+		Uint32 colorSDL = SDL_MapRGBA(fmt, color.r, color.g, color.b, color.a);
 		Uint32* bufp;
 
 		bufp = (Uint32*)srf->pixels + y1 * srf->pitch / 4 + x;
@@ -548,7 +554,7 @@ namespace QuickCG
 		rec.y = y1;
 		rec.w = x2 - x1 + 1;
 		rec.h = y2 - y1 + 1;
-		Uint32 colorSDL = SDL_MapRGB(fmt, color.r, color.g, color.b);
+		Uint32 colorSDL = SDL_MapRGBA(fmt, color.r, color.g, color.b, color.a);
 		SDL_FillRect(srf, &rec, colorSDL);  //SDL's ability to draw a hardware rectangle is used for now
 		return 1;
 	}
@@ -658,7 +664,7 @@ namespace QuickCG
 		this->r = 0;
 		this->g = 0;
 		this->b = 0;
-		this->a = 255;
+		this->a = 0;
 	}
 	ColorRGBA8bit::ColorRGBA8bit(Uint8 r, Uint8 g, Uint8 b, Uint8 a)
 	{
@@ -679,7 +685,7 @@ namespace QuickCG
 		this->r = 0;
 		this->g = 0;
 		this->b = 0;
-		this->a = 255;
+		this->a = 0;
 	}
 
 	//Add two colors
@@ -689,6 +695,7 @@ namespace QuickCG
 		c.r = color.r + color2.r;
 		c.g = color.g + color2.g;
 		c.b = color.b + color2.b;
+		c.a = color.a + color2.a;
 		return c;
 	}
 
@@ -699,6 +706,7 @@ namespace QuickCG
 		c.r = color.r - color2.r;
 		c.g = color.g - color2.g;
 		c.b = color.b - color2.b;
+		c.a = color.a - color2.a;
 		return c;
 	}
 
@@ -709,6 +717,7 @@ namespace QuickCG
 		c.r = color.r * a;
 		c.g = color.g * a;
 		c.b = color.b * a;
+		c.a = color.a * a;
 		return c;
 	}
 
@@ -719,6 +728,7 @@ namespace QuickCG
 		c.r = color.r * a;
 		c.g = color.g * a;
 		c.b = color.b * a;
+		c.a = color.a * a;
 		return c;
 	}
 
@@ -730,44 +740,59 @@ namespace QuickCG
 		c.r = color.r / a;
 		c.g = color.g / a;
 		c.b = color.b / a;
+		c.a = color.a / a;
+		return c;
+	}
+
+	ColorRGBA overlay(const ColorRGBA& color, const ColorRGBA& color2)
+	{
+		ColorRGBA c;
+		c.r = (color.r * color.a / 255) + (color2.r * color2.a * (255 - color.a) / (255 * 255));
+		c.g = (color.g * color.a / 255) + (color2.g * color2.a * (255 - color.a) / (255 * 255));
+		c.b = (color.b * color.a / 255) + (color2.b * color2.a * (255 - color.a) / (255 * 255));
+		c.a = color.a + (color2.a * (255 - color.a) / 255);
 		return c;
 	}
 
 	//Are both colors equal?
 	bool operator==(const ColorRGBA& color, const ColorRGBA& color2)
 	{
-		return(color.r == color2.r && color.g == color2.g && color.b == color2.b);
+		return(color.r == color2.r && color.g == color2.g && color.b == color2.b && color.a == color2.a);
 	}
 
 	//Are both colors not equal?
 	bool operator!=(const ColorRGBA& color, const ColorRGBA& color2)
 	{
-		return(!(color.r == color2.r && color.g == color2.g && color.b == color2.b));
+		return(!(color.r == color2.r && color.g == color2.g && color.b == color2.b && color.a == color2.a));
 	}
 
-	ColorHSL::ColorHSL(Uint8 h, Uint8 s, Uint8 l)
+	ColorHSL::ColorHSL(Uint8 h, Uint8 s, Uint8 l, Uint8 a)
 	{
 		this->h = h;
 		this->s = s;
 		this->l = l;
+		this->a = a;
 	}
 	ColorHSL::ColorHSL()
 	{
 		this->h = 0;
 		this->s = 0;
 		this->l = 0;
+		this->a = 0;
 	}
-	ColorHSV::ColorHSV(Uint8 h, Uint8 s, Uint8 v)
+	ColorHSV::ColorHSV(Uint8 h, Uint8 s, Uint8 v, Uint8 a)
 	{
 		this->h = h;
 		this->s = s;
 		this->v = v;
+		this->a = a;
 	}
 	ColorHSV::ColorHSV()
 	{
 		this->h = 0;
 		this->s = 0;
 		this->v = 0;
+		this->a = 0;
 	}
 
 
@@ -785,10 +810,11 @@ namespace QuickCG
 	//Converts an RGB color to HSL color
 	ColorHSL RGBtoHSL(const ColorRGBA& ColorRGBA)
 	{
-		float r, g, b, h = 0, s = 0, l; //this function works with floats between 0 and 1
+		float r, g, b, a, h = 0, s = 0, l; //this function works with floats between 0 and 1
 		r = ColorRGBA.r / 256.0;
 		g = ColorRGBA.g / 256.0;
 		b = ColorRGBA.b / 256.0;
+		a = ColorRGBA.a / 256.0;
 
 		float maxColor = std::max(r, std::max(g, b));
 		float minColor = std::min(r, std::min(g, b));
@@ -818,17 +844,19 @@ namespace QuickCG
 		colorHSL.h = int(h * 255.0);
 		colorHSL.s = int(s * 255.0);
 		colorHSL.l = int(l * 255.0);
+		colorHSL.a = int(a * 255.0);
 		return colorHSL;
 	}
 
 	//Converts an HSL color to RGB color
 	ColorRGBA HSLtoRGB(const ColorHSL& colorHSL)
 	{
-		float r, g, b, h, s, l; //this function works with floats between 0 and 1
+		float r, g, b, a, h, s, l; //this function works with floats between 0 and 1
 		float temp1, temp2, tempr, tempg, tempb;
 		h = colorHSL.h / 256.0;
 		s = colorHSL.s / 256.0;
 		l = colorHSL.l / 256.0;
+		a = colorHSL.a / 256.0;
 
 		//If saturation is 0, the color is a shade of grey
 		if (s == 0) r = g = b = l;
@@ -868,16 +896,18 @@ namespace QuickCG
 		ColorRGBA.r = int(r * 255.0);
 		ColorRGBA.g = int(g * 255.0);
 		ColorRGBA.b = int(b * 255.0);
+		ColorRGBA.a = int(a * 255.0);
 		return ColorRGBA;
 	}
 
 	//Converts an RGB color to HSV color
 	ColorHSV RGBtoHSV(const ColorRGBA& ColorRGBA)
 	{
-		float r, g, b, h = 0.0, s = 0.0, v; //this function works with floats between 0 and 1
+		float r, g, b, a, h = 0.0, s = 0.0, v; //this function works with floats between 0 and 1
 		r = ColorRGBA.r / 256.0;
 		g = ColorRGBA.g / 256.0;
 		b = ColorRGBA.b / 256.0;
+		b = ColorRGBA.a / 256.0;
 
 		float maxColor = std::max(r, std::max(g, b));
 		float minColor = std::min(r, std::min(g, b));
@@ -907,16 +937,18 @@ namespace QuickCG
 		colorHSV.h = int(h * 255.0);
 		colorHSV.s = int(s * 255.0);
 		colorHSV.v = int(v * 255.0);
+		colorHSV.a = int(a * 255.0);
 		return colorHSV;
 	}
 
 	//Converts an HSV color to RGB color
 	ColorRGBA HSVtoRGB(const ColorHSV& colorHSV)
 	{
-		float r, g, b, h, s, v; //this function works with floats between 0 and 1
+		float r, g, b, a, h, s, v; //this function works with floats between 0 and 1
 		h = colorHSV.h / 256.0;
 		s = colorHSV.s / 256.0;
 		v = colorHSV.v / 256.0;
+		a = colorHSV.a / 256.0;
 
 		//if saturation is 0, the color is a shade of grey
 		if (s == 0.0) r = g = b = v;
@@ -948,20 +980,22 @@ namespace QuickCG
 		ColorRGBA.r = int(r * 255.0);
 		ColorRGBA.g = int(g * 255.0);
 		ColorRGBA.b = int(b * 255.0);
+		ColorRGBA.a = int(a * 255.0);
 		return ColorRGBA;
 	}
 
 	Uint32 RGBtoINT(const ColorRGBA& ColorRGBA)
 	{
-		return 65536 * ColorRGBA.r + 256 * ColorRGBA.g + ColorRGBA.b;
+		return (ColorRGBA.a | (ColorRGBA.b << 8) | (ColorRGBA.g << 16) | (ColorRGBA.r << 24));
 	}
 
 	ColorRGBA INTtoRGB(Uint32 colorINT)
 	{
 		ColorRGBA ColorRGBA;
-		ColorRGBA.r = (colorINT / 65536) % 256;
-		ColorRGBA.g = (colorINT / 256) % 256;
-		ColorRGBA.b = colorINT % 256;
+		ColorRGBA.r = (colorINT & 0xFF000000) >> 24;
+		ColorRGBA.g = (colorINT & 0x00FF0000) >> 16;
+		ColorRGBA.b = (colorINT & 0x0000FF00) >> 8;
+		ColorRGBA.a = (colorINT & 0x000000FF);
 		return ColorRGBA;
 	}
 
@@ -1007,7 +1041,7 @@ namespace QuickCG
 			out[i].r = image[i * 4 + 0];
 			out[i].g = image[i * 4 + 1];
 			out[i].b = image[i * 4 + 2];
-			//out[i].a = image[i * 4 + 3];
+			out[i].a = image[i * 4 + 3];
 		}
 
 		return 0;
@@ -1023,7 +1057,7 @@ namespace QuickCG
 
 		for (size_t i = 0; i < out.size(); i++)
 		{
-			out[i] = 0x1000000 * image[i * 4 + 3] + 0x10000 * image[i * 4 + 0] + 0x100 * image[i * 4 + 1] + image[i * 4 + 2];
+			out[i] = 0x100000000 * image[i * 4 + 3] + 0x10000 * image[i * 4 + 0] + 0x100 * image[i * 4 + 1] + image[i * 4 + 2];
 		}
 
 		return 0;
@@ -1442,7 +1476,7 @@ namespace QuickCG
 		{
 			struct Info
 			{
-				unsigned long width, height, colorType, bitDepth, compressionMethod, filterMethod, interlaceMethod, key_r, key_g, key_b;
+				unsigned long width, height, colorType, bitDepth, compressionMethod, filterMethod, interlaceMethod, key_r, key_g, key_b, key_a;
 				bool key_defined; //is a transparent color key given?
 				std::vector<unsigned char> palette;
 			} info;
@@ -1475,8 +1509,7 @@ namespace QuickCG
 						if (info.palette.size() > (4 * 256)) { error = 38; return; } //error: palette too big
 						for (size_t i = 0; i < info.palette.size(); i += 4)
 						{
-							for (size_t j = 0; j < 3; j++) info.palette[i + j] = in[pos++]; //RGB
-							info.palette[i + 3] = 255; //alpha
+							for (size_t j = 0; j < 4; j++) info.palette[i + j] = in[pos++]; //RGBA
 						}
 					}
 					else if (in[pos + 0] == 't' && in[pos + 1] == 'R' && in[pos + 2] == 'N' && in[pos + 3] == 'S') //palette transparency chunk (tRNS)
@@ -1731,6 +1764,7 @@ namespace QuickCG
 		return decodePNG(out_image_32bit, image_width, image_height, in_png.size() ? &in_png[0] : 0, in_png.size());
 	}
 
+
 	////////////////////////////////////////////////////////////////////////////////
 	//DATA//////////////////////////////////////////////////////////////////////////
 	////////////////////////////////////////////////////////////////////////////////
@@ -1743,35 +1777,13 @@ namespace QuickCG
 		{
 			/*
 			The full extended ASCII character set, in the form 256 bitmap symbols of 8x8
-			pixels in one 128x128 PNG, base64-encoded.
+			pixels in one 128x128 PNG.
 			The background color is black, not transparent.
 			*/
-			const std::string font8x8string = "\
-			iVBORw0KGgoAAAANSUhEUgAAAIAAAACAAQAAAADrRVxmAAAEjklEQVR4AY2TBYhsyRWG/9hqPcEP\n\
-			TLOO24n1u8Bdxd3iWK1VrICOdQ6kcmeDRXGJJ0gch6CxgoGKHV7Qx8A8aWxdOjZ7gaLuVt2RdfnL\n\
-			mq//I9eAYfDnu/OYMJ3r7939IfCNqXShgn7vevfBhz8F/PKghK6jJ9wPz7l7d/vZUUro9x7409cd\n\
-			P/wE8Ke9EEppQPsZ/PCJrrsUWojS6tNzyPmqllSH7eOfamWBrmtlhTbxh3js3eR2BxARjrQ527uD\n\
-			PfQ9EeMumjDeM7gDqYFkbHT9hFLIfU1bSClxGobqILej1TA0x9TXHAN2ZOipJy53TVSr9G7ne0Or\n\
-			ciICRkw4FXvP6CxZNF0HiPchecvsGIBpoETtoqWej+IZXmgNS1NGBjdQDF/GsWPO5EenaDlW4DiH\n\
-			cFqjVWHwYzjViV9YZJG7LAIQrEC3qn20qjqHKC6zMX6MRpXZZjLI3HVqRpLAHGEIz7I1xSirAaqD\n\
-			oaxa/VaJVwwGJGcxIlZWzATLr2sDgXOfS+lVbnl8m1KHJM75hx5yysbZ5x/3uKouus98JlbgbTlM\n\
-			FYToRGJmI/bS1Qry7LiorP6hdDEhasthXQXOpeQh2qps71GRx0ur8jplqUM1JS0S5Tzg1OnvZ6DW\n\
-			UjeDDVfg9QeWyQNBQ1fBpU7YEiXAXpZFBcXzQ9YQKhCvrPJ84mSva2C7eFwkc0pS5N2C12kCY4MF\n\
-			OmyYNquGGBYGvu7H948kiBG79itx/OwogHEadKtrJs9FFQguarbqmIQvNaBONdrgmiM1sP6jrGVr\n\
-			Hpf9xyWp4FgjsMKpzmPWgjbro5+MWUx8ucPl9X4I8w3KFcDDqY/HN6hdQ2pA5huk3BwJIVjzIZXi\n\
-			wyNHwJrtSGv2yeRaBQXbW17uZJZgMeiGUTcNG2WoYg/gtiGBGRHSi0io26pbCaCq1xljolNlYhWI\n\
-			5ntCCHHIuQEFaftTg42xgpxhBrl3GIbrWqJeVCGY1eNEC9wjaDgpdbo9C8CrburoQF73d5B3FbOC\n\
-			Do/IPsGaIiKqmjRu8/8GyK7OasCyVoceKdeQx/NVqjkuisgwmE4os+7jRCNAwNkVFh2A3PcMpHTc\n\
-			2mKEdwBU6YMKWQFQ7xjY34dzMCw6PntPb3O+57+kH0TgVhOI0Tz8aaoObeDyMGg0F//V1xyDyKAK\n\
-			CPCDn/d4lW59DwG446NXiGgJLJd1VvKt33311WB2jEuMh8tyuBxfdtB1y+uuO3GM42GpjsNSxvHE\n\
-			saxzCYCa49XgdQ6qE41gHm8Kbl1euPfF6cL04nTqYAZ4vqJpavPCvfXv2YHZQ3OCtr0D0Ca1RZiw\n\
-			PTe9Aajz1lvr8SoH1eMETNN076231jbH2s72HABattUu4h2DqgIgd90C1/UCSCkObs3eM4xVrDV5\n\
-			HtxlSYmGISouj9GTOtKSwsFBVvxNo+cGkteDg2OH00DivQ5DyxGjL2KJu+cFtlcgAm3LR0cVWzpL\n\
-			jA44JwIgM/MO8Rc9YLxBI2R3CD+ZQdcfOYgyOqrA9kc5iPBFED3rQ3MAoH3+CQAPNEfOuYJXf6q0\n\
-			QtOibS8BEX/cffjo+7IAAAAASUVORK5CYII=";
 
 			std::vector<unsigned char> png, image;
-			decodeBase64(png, font8x8string);
+			loadFile(png, "charset.png");
+
 			unsigned long w, h;
 			decodePNG(image, w, h, &png[0], png.size());
 			for (size_t c = 0; c < 256; c++)

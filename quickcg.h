@@ -121,6 +121,7 @@ ColorRGBA operator-(const ColorRGBA& color, const ColorRGBA& color2);
 ColorRGBA operator*(const ColorRGBA& color, int a);
 ColorRGBA operator*(int a, const ColorRGBA& color);
 ColorRGBA operator/(const ColorRGBA& color, int a);
+ColorRGBA overlay(const ColorRGBA& color, const ColorRGBA& color2);
 bool operator==(const ColorRGBA& color, const ColorRGBA& color2);
 bool operator!=(const ColorRGBA& color, const ColorRGBA& color2);
 
@@ -160,8 +161,9 @@ struct ColorHSL
   int h;
   int s;
   int l;
+  int a;
 
-  ColorHSL(Uint8 h, Uint8 s, Uint8 l);
+  ColorHSL(Uint8 h, Uint8 s, Uint8 l, Uint8 a);
   ColorHSL();
 };
 
@@ -171,8 +173,9 @@ struct ColorHSV
   int h;
   int s;
   int v;
+  int a;
 
-  ColorHSV(Uint8 h, Uint8 s, Uint8 v);
+  ColorHSV(Uint8 h, Uint8 s, Uint8 v, Uint8 a);
   ColorHSV();
 };
 
