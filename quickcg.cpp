@@ -294,12 +294,12 @@ namespace QuickCG
 
 	void sleep(double seconds)
 	{
-		SDL_Delay(seconds * 1000);
+		SDL_Delay((Uint32)seconds * 1000);
 	}
 
 	void waitFrame(double oldTime, double frameDuration) //in seconds
 	{
-		float time = getTime();
+		double time = getTime();
 		while (time - oldTime < frameDuration)
 		{
 			time = getTime();
@@ -316,11 +316,11 @@ namespace QuickCG
 	bool done(bool quit_if_esc, bool delay) //delay makes CPU have some free time, use once per frame to avoid 100% usage of a CPU core
 	{
 		if (delay) SDL_Delay(5); //so it consumes less processing power
-		int done = 0;
+		bool done = false;
 		if (!SDL_PollEvent(&event)) return 0;
 		readKeys();
-		if (quit_if_esc && inkeys[SDLK_ESCAPE]) done = 1;
-		if (event.type == SDL_QUIT) done = 1;
+		if (quit_if_esc && inkeys[SDLK_ESCAPE]) done = true;
+		if (event.type == SDL_QUIT) done = true;
 		return done;
 	}
 
@@ -810,14 +810,14 @@ namespace QuickCG
 	//Converts an RGB color to HSL color
 	ColorHSL RGBtoHSL(const ColorRGBA& ColorRGBA)
 	{
-		float r, g, b, a, h = 0, s = 0, l; //this function works with floats between 0 and 1
+		double r, g, b, a, h = 0, s = 0, l; //this function works with floats between 0 and 1
 		r = ColorRGBA.r / 256.0;
 		g = ColorRGBA.g / 256.0;
 		b = ColorRGBA.b / 256.0;
 		a = ColorRGBA.a / 256.0;
 
-		float maxColor = std::max(r, std::max(g, b));
-		float minColor = std::min(r, std::min(g, b));
+		const double maxColor = std::max(r, std::max(g, b));
+		const double minColor = std::min(r, std::min(g, b));
 
 		if (minColor == maxColor) //R = G = B, so it's a shade of grey
 		{
@@ -851,8 +851,8 @@ namespace QuickCG
 	//Converts an HSL color to RGB color
 	ColorRGBA HSLtoRGB(const ColorHSL& colorHSL)
 	{
-		float r, g, b, a, h, s, l; //this function works with floats between 0 and 1
-		float temp1, temp2, tempr, tempg, tempb;
+		double r, g, b, a, h, s, l; //this function works with floats between 0 and 1
+		double temp1, temp2, tempr, tempg, tempb;
 		h = colorHSL.h / 256.0;
 		s = colorHSL.s / 256.0;
 		l = colorHSL.l / 256.0;
@@ -903,14 +903,14 @@ namespace QuickCG
 	//Converts an RGB color to HSV color
 	ColorHSV RGBtoHSV(const ColorRGBA& ColorRGBA)
 	{
-		float r, g, b, a, h = 0.0, s = 0.0, v; //this function works with floats between 0 and 1
+		double r, g, b, a, h = 0.0, s = 0.0, v; //this function works with floats between 0 and 1
 		r = ColorRGBA.r / 256.0;
 		g = ColorRGBA.g / 256.0;
 		b = ColorRGBA.b / 256.0;
-		b = ColorRGBA.a / 256.0;
+		a = ColorRGBA.a / 256.0;
 
-		float maxColor = std::max(r, std::max(g, b));
-		float minColor = std::min(r, std::min(g, b));
+		const double maxColor = std::max(r, std::max(g, b));
+		const double minColor = std::min(r, std::min(g, b));
 
 		v = maxColor;
 
@@ -944,7 +944,7 @@ namespace QuickCG
 	//Converts an HSV color to RGB color
 	ColorRGBA HSVtoRGB(const ColorHSV& colorHSV)
 	{
-		float r, g, b, a, h, s, v; //this function works with floats between 0 and 1
+		double r, g, b, a, h, s, v; //this function works with floats between 0 and 1
 		h = colorHSV.h / 256.0;
 		s = colorHSV.s / 256.0;
 		v = colorHSV.v / 256.0;
@@ -955,7 +955,7 @@ namespace QuickCG
 		//if saturation > 0, more complex calculations are needed
 		else
 		{
-			float f, p, q, t;
+			double f, p, q, t;
 			int i;
 			h *= 6.0; //to bring hue to a number between 0 and 6, better for the calculations
 			i = int(floor(h)); //e.g. 2.7 becomes 2 and 3.01 becomes 3 or 4.9999 becomes 4
@@ -1057,7 +1057,7 @@ namespace QuickCG
 
 		for (size_t i = 0; i < out.size(); i++)
 		{
-			out[i] = 0x100000000 * image[i * 4 + 3] + 0x10000 * image[i * 4 + 0] + 0x100 * image[i * 4 + 1] + image[i * 4 + 2];
+			out[i] = (Uint32)0x100000000 * image[i * 4 + 3] + 0x10000 * image[i * 4 + 0] + 0x100 * image[i * 4 + 1] + image[i * 4 + 2];
 		}
 
 		return 0;
@@ -1212,7 +1212,7 @@ namespace QuickCG
 	{
 		unsigned long bit24 = 0;
 		unsigned long sextet[4] = { 0, 0, 0, 0 };
-		unsigned long octet[3] = { 0, 0, 0 };
+		unsigned char octet[3] = { 0, 0, 0 };
 
 		out.clear();
 		out.reserve((3 * in.size()) / 4);
@@ -1896,13 +1896,13 @@ namespace QuickCG
 	{
 		Mutex mutex(audio_lock);
 
-		int dataLengthLeft = audio_data.size();
+		size_t dataLengthLeft = audio_data.size();
 
 		//only play if we have data left
 		if (dataLengthLeft <= 0) return;
 
 		int nsamples = len / 2; //always 16-bit, so always 2 bytes per sample, hence the amount of samples being len / 2
-		int fill_len = (nsamples < dataLengthLeft ? nsamples : dataLengthLeft);
+		size_t fill_len = (nsamples < dataLengthLeft ? nsamples : dataLengthLeft);
 
 		for (int i = 0; i < nsamples; i++)
 		{
